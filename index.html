@@ -7,7 +7,7 @@
     body { font-family: sans-serif; direction: rtl; padding: 20px; background: #f4f4f4; }
     h1 { color: #2c3e50; }
     .stat-box { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    .label { font-weight: bold; display: inline-block; width: 200px; }
+    .label { font-weight: bold; display: inline-block; width: 220px; }
     table { margin-top: 10px; width: 100%; border-collapse: collapse; background: white; }
     th, td { padding: 10px; border: 1px solid #ccc; text-align: right; }
     th { background: #eee; }
@@ -47,7 +47,7 @@
     document.getElementById("active-users").textContent = stats.activeusers.toLocaleString();
   }
 
-  // שליפת מספר חברים בכל קבוצה
+  // שליפת מספר חברים בקבוצת הרשאה (כולל דפדוף מעבר ל-500)
   async function fetchGroupCount(groupName) {
     let count = 0;
     let continueToken = null;
@@ -61,19 +61,24 @@
         aulimit: "500",
         origin: "*"
       });
-      if (continueToken) params.set("aucontinue", continueToken);
+
+      if (continueToken) {
+        params.set("aucontinue", continueToken);
+      }
 
       const url = "https://he.wikipedia.org/w/api.php?" + params.toString();
       const res = await fetch(url);
       const data = await res.json();
 
-      count += (data.query.allusers || []).length;
+      count += data.query?.allusers?.length || 0;
       continueToken = data.continue?.aucontinue;
+
     } while (continueToken);
 
     return count;
   }
 
+  // הצגת טבלת ההרשאות
   async function fetchAllGroups() {
     const groups = {
       "bureaucrat": "בירוקרטים",
@@ -93,6 +98,7 @@
     }
   }
 
+  // קריאות ראשיות
   fetchWikiStats();
   fetchAllGroups();
 </script>
