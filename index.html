@@ -2,66 +2,92 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8">
-  <title>חלוקת הרשאות בוויקיפדיה</title>
+  <title>סטטוס עורכים בוויקיפדיה</title>
   <style>
     body { font-family: sans-serif; direction: rtl; padding: 20px; background: #f4f4f4; }
     h1 { color: #2c3e50; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    th, td { padding: 10px; border: 1px solid #ddd; text-align: right; }
-    th { background-color: #f0f0f0; }
-    .note { font-size: 0.9em; color: #666; }
+    .stat-box { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .label { font-weight: bold; display: inline-block; width: 180px; }
+    table { margin-top: 10px; width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: right; }
+    th { background: #eee; }
   </style>
 </head>
 <body>
 
-<h1>נתוני הרשאות בוויקיפדיה העברית</h1>
-<p class="note">הנתונים נטענים מדף <a href="https://he.wikipedia.org/wiki/ויקיפדיה:בקרת_הרשאות" target="_blank">ויקיפדיה:בקרת הרשאות</a> – יתכן עיכוב קצר בטעינה</p>
+<h1>נתוני ויקיפדיה העברית - נכון ל־<span id="timestamp">...</span></h1>
 
-<table id="permissions-table">
-  <thead>
-    <tr>
-      <th>הרשאה</th>
-      <th>מספר משתמשים</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td colspan="2">טוען נתונים...</td></tr>
-  </tbody>
-</table>
+<div class="stat-box">
+  <div><span class="label">מספר דפי תוכן:</span> <span id="content-pages">טוען...</span></div>
+  <div><span class="label">מספר משתמשים פעילים:</span> <span id="active-users">טוען...</span></div>
+</div>
+
+<div class="stat-box">
+  <h2>מספר משתמשים לפי הרשאה</h2>
+  <table>
+    <thead>
+      <tr><th>הרשאה</th><th>מספר משתמשים</th></tr>
+    </thead>
+    <tbody id="roles-table">
+      <tr><td colspan="2">טוען נתונים...</td></tr>
+    </tbody>
+  </table>
+</div>
 
 <script>
-  async function fetchPermissionData() {
-    const res = await fetch("https://he.wikipedia.org/wiki/ויקיפדיה:בקרת_הרשאות", {
-      headers: { "Content-Type": "text/html; charset=UTF-8" }
-    });
+  // עדכון תאריך ושעה
+  document.getElementById("timestamp").textContent = new Date().toLocaleString('he-IL');
+
+  // שליפת מספר דפים ומשתמשים פעילים
+  async function fetchWikiStats() {
+    const res = await fetch("https://he.wikipedia.org/w/api.php?action=query&meta=siteinfo&siprop=statistics&format=json&origin=*");
+    const data = await res.json();
+    const stats = data.query.statistics;
+
+    document.getElementById("content-pages").textContent = stats.contentpages.toLocaleString();
+    document.getElementById("active-users").textContent = stats.activeusers.toLocaleString();
+  }
+
+  // שליפת הרשאות ספציפיות מדף בקרת הרשאות
+  async function fetchRolesFromPage() {
+    const relevantRoles = {
+      "בירוקרטים": "בירוקרטים",
+      "מפעילי מערכת": "מפעילי מערכת",
+      "מנטרים": "מנטרים",
+      "בדוקי עריכה אוטומטית": "בדוקי עריכה אוטומטית"
+    };
+
+    const res = await fetch("https://he.wikipedia.org/wiki/ויקיפדיה:בקרת_הרשאות");
     const text = await res.text();
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, "text/html");
 
-    const tableRows = Array.from(doc.querySelectorAll("table.wikitable tbody tr"));
-    const permissionData = [];
+    const rows = Array.from(doc.querySelectorAll("table.wikitable tbody tr"));
+    const results = [];
 
-    for (let row of tableRows) {
+    for (let row of rows) {
       const cells = row.querySelectorAll("td");
       if (cells.length >= 2) {
-        const permission = cells[0].innerText.trim();
-        const countText = cells[1].innerText.trim().replace(/[^\d]/g, '');
-        const count = parseInt(countText) || 0;
-        permissionData.push({ permission, count });
+        const role = cells[0].innerText.trim();
+        const numberText = cells[1].innerText.trim().replace(/[^\d]/g, '');
+        const count = parseInt(numberText) || 0;
+        if (relevantRoles[role]) {
+          results.push({ role, count });
+        }
       }
     }
 
-    // הצגה בטבלה
-    const tbody = document.querySelector("#permissions-table tbody");
+    const tbody = document.getElementById("roles-table");
     tbody.innerHTML = "";
-    permissionData.forEach(({ permission, count }) => {
+    results.forEach(({ role, count }) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${permission}</td><td>${count.toLocaleString()}</td>`;
+      tr.innerHTML = `<td>${role}</td><td>${count.toLocaleString()}</td>`;
       tbody.appendChild(tr);
     });
   }
 
-  fetchPermissionData();
+  fetchWikiStats();
+  fetchRolesFromPage();
 </script>
 
 </body>
