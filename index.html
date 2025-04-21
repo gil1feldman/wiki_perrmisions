@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>נתוני עורכי ויקיפדיה</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .data-section {
+      background: white;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: right;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+
+<h1 id="page-title">נתוני עורכי ויקיפדיה - נכון ל...</h1>
+
+<div class="data-section">
+  <h2>מספר עורכים פעילים (ב־30 הימים האחרונים)</h2>
+  <p id="active-editors">טוען...</p>
+</div>
+
+<div class="data-section">
+  <h2>חלוקה לפי הרשאות משתמש</h2>
+  <table id="user-groups-table">
+    <thead>
+      <tr>
+        <th>הרשאה</th>
+        <th>מספר משתמשים</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+  async function fetchActiveEditors() {
+    const res = await fetch('https://he.wikipedia.org/w/api.php?action=query&list=allusers&auactiveusers=1&format=json&aulimit=1&origin=*');
+    const data = await res.json();
+    const count = data?.query?.allusers?.length ?? 0;
+    document.getElementById('active-editors').textContent = `${count.toLocaleString()} (ייתכן והמספר המלא אינו זמין מה־API)`;
+  }
+
+  async function fetchUserGroups() {
+    const res = await fetch('https://he.wikipedia.org/w/api.php?action=query&list=allusers&format=json&aulimit=500&auprop=groups&origin=*');
+    const data = await res.json();
+    const users = data?.query?.allusers ?? [];
+
+    const groupCounts = {};
+    users.forEach(user => {
+      if (user.groups && user.groups.length > 0) {
+        user.groups.forEach(group => {
+          groupCounts[group] = (groupCounts[group] || 0) + 1;
+        });
+      } else {
+        groupCounts['ללא הרשאה מיוחדת'] = (groupCounts['ללא הרשאה מיוחדת'] || 0) + 1;
+      }
+    });
+
+    const tbody = document.querySelector('#user-groups-table tbody');
+    tbody.innerHTML = '';
+
+    Object.entries(groupCounts).sort((a,b) => b[1] - a[1]).forEach(([group, count]) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${group}</td><td>${count.toLocaleString()}</td>`;
+      tbody.appendChild(row);
+    });
+  }
+
+  function updateTime() {
+    const now = new Date();
+    const formatted = now.toLocaleString('he-IL');
+    document.getElementById('page-title').textContent = `נתוני עורכי ויקיפדיה - נכון ל־${formatted}`;
+  }
+
+  updateTime();
+  fetchActiveEditors();
+  fetchUserGroups();
+</script>
+
+</body>
+</html>
